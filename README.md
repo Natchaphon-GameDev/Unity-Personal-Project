@@ -1,2 +1,2 @@
-# Unity-Personal-Project-Procedural-Generation
-Just learn to create nice world by randomly
+# Unity-Personal-Project
+Just learn to create nice feature that I interested
