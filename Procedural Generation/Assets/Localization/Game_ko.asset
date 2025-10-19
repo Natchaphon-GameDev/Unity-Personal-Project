@@ -10,44 +10,28 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
-  m_Name: Game_en
+  m_Name: Game_ko
   m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.StringTable
   m_LocaleId:
-    m_Code: en
+    m_Code: ko
   m_SharedData: {fileID: 11400000, guid: 3c02b633f7a16d24bb324119d6e7e9b9, type: 2}
   m_Metadata:
     m_Items: []
   m_TableData:
-  - m_Id: 6742085632
-    m_Localized: pruek
-    m_Metadata:
-      m_Items: []
-  - m_Id: 6788222976
-    m_Localized: sell
-    m_Metadata:
-      m_Items: []
-  - m_Id: 6788222977
-    m_Localized: stupid
-    m_Metadata:
-      m_Items: []
-  - m_Id: 6788222978
-    m_Localized: idiot
-    m_Metadata:
-      m_Items: []
   - m_Id: 350251388928
-    m_Localized: Tree
+    m_Localized: "\uB098\uBB34"
     m_Metadata:
       m_Items: []
   - m_Id: 350251388929
-    m_Localized: sell
+    m_Localized: "\uD314\uB2E4"
     m_Metadata:
       m_Items: []
   - m_Id: 350251388930
-    m_Localized: buffalo
+    m_Localized: "\uBB3C\uC18C"
     m_Metadata:
       m_Items: []
   - m_Id: 350251388931
-    m_Localized: Really stupid.
+    m_Localized: "\uC815\uB9D0 \uBA4D\uCCAD\uD558\uC8E0."
     m_Metadata:
       m_Items: []
   references:

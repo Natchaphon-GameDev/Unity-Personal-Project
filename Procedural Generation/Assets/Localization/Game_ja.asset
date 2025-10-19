@@ -10,44 +10,28 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
-  m_Name: Game_en
+  m_Name: Game_ja
   m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.StringTable
   m_LocaleId:
-    m_Code: en
+    m_Code: ja
   m_SharedData: {fileID: 11400000, guid: 3c02b633f7a16d24bb324119d6e7e9b9, type: 2}
   m_Metadata:
     m_Items: []
   m_TableData:
-  - m_Id: 6742085632
-    m_Localized: pruek
-    m_Metadata:
-      m_Items: []
-  - m_Id: 6788222976
-    m_Localized: sell
-    m_Metadata:
-      m_Items: []
-  - m_Id: 6788222977
-    m_Localized: stupid
-    m_Metadata:
-      m_Items: []
-  - m_Id: 6788222978
-    m_Localized: idiot
-    m_Metadata:
-      m_Items: []
   - m_Id: 350251388928
-    m_Localized: Tree
+    m_Localized: "\u6728"
     m_Metadata:
       m_Items: []
   - m_Id: 350251388929
-    m_Localized: sell
+    m_Localized: "\u58F2\u308B"
     m_Metadata:
       m_Items: []
   - m_Id: 350251388930
-    m_Localized: buffalo
+    m_Localized: "\u30D0\u30C3\u30D5\u30A1\u30ED\u30FC"
     m_Metadata:
       m_Items: []
   - m_Id: 350251388931
-    m_Localized: Really stupid.
+    m_Localized: "\u672C\u5F53\u306B\u30D0\u30AB\u3060\u3002"
     m_Metadata:
       m_Items: []
   references:
