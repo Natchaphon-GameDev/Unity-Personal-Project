@@ -6,6 +6,8 @@ namespace DefaultNamespace {
         [SerializeField] private WeaponConfig config;
         
         private WeaponLogic _logic;
+        
+        private float _currentDamage;
 
         private void Awake() => _logic = new WeaponLogic(config);
         public void Attack(IDamageable target) => _logic.ExecuteAttack(target);
@@ -15,6 +17,7 @@ namespace DefaultNamespace {
         private readonly WeaponConfig _config;
 
         public WeaponLogic(WeaponConfig config) => _config = config;
+        
         public void ExecuteAttack(IDamageable target) => target.TakeDamage(_config.damage);
     }
 }

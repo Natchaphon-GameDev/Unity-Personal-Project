@@ -12,6 +12,7 @@ namespace DefaultNamespace {
         public void TakeDamage(int damage) {
             _health -= damage;
             Debug.Log($"Enemy took {damage} damage, remaining health: {_health}");
+            Debug.Log($"Enemy took {damage} damage, remaining health: {_health}");
         }
     }
 }
