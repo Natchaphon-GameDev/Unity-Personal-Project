@@ -36,6 +36,15 @@ namespace TaskbarHero
         }
 
         [StructLayout(LayoutKind.Sequential)]
+        public struct MONITORINFO
+        {
+            public int cbSize;
+            public RECT rcMonitor;
+            public RECT rcWork;
+            public uint dwFlags;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
         public struct MSG
         {
             public IntPtr hwnd;
@@ -61,9 +70,17 @@ namespace TaskbarHero
         public const uint WS_EX_TOOLWINDOW = 0x00000080;
         public const uint WS_EX_LAYERED = 0x00080000;
 
+        public const uint SWP_NOSIZE = 0x0001;
+        public const uint SWP_NOMOVE = 0x0002;
+        public const uint SWP_NOZORDER = 0x0004;
         public const uint SWP_NOACTIVATE = 0x0010;
         public const uint SWP_SHOWWINDOW = 0x0040;
         public const uint SWP_FRAMECHANGED = 0x0020;
+
+        // Free-floating overlay: drag + selective click-through + monitor placement.
+        public static readonly IntPtr HWND_NOTOPMOST = new IntPtr(-2);
+        public const uint MONITOR_DEFAULTTOPRIMARY = 0x00000001;
+        public const int VK_LBUTTON = 0x01;
 
         // Global hotkey modifiers / messages (used by TaskbarHotkeys).
         public const uint MOD_ALT = 0x0001;
@@ -75,6 +92,15 @@ namespace TaskbarHero
         public const uint WM_HOTKEY = 0x0312;
 
         public const uint VK_Q = 0x51;
+
+        // Registry (HKCU Run key for "launch at startup"). Done via advapi32 P/Invoke
+        // rather than Microsoft.Win32.Registry, which isn't in the player's .NET Standard
+        // reference set.
+        public static readonly IntPtr HKEY_CURRENT_USER = new IntPtr(unchecked((int)0x80000001));
+        public const int KEY_QUERY_VALUE = 0x0001;
+        public const int KEY_SET_VALUE = 0x0002;
+        public const int REG_SZ = 1;
+        public const int ERROR_SUCCESS = 0;
 
         public static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
 
@@ -102,6 +128,18 @@ namespace TaskbarHero
         public static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS margins);
 
         [DllImport("user32.dll")]
+        public static extern bool GetCursorPos(out POINT point);
+
+        [DllImport("user32.dll")]
+        public static extern short GetAsyncKeyState(int vKey);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr MonitorFromPoint(POINT point, uint flags);
+
+        [DllImport("user32.dll")]
+        public static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);
+
+        [DllImport("user32.dll")]
         public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint modifiers, uint vk);
 
         [DllImport("user32.dll")]
@@ -115,5 +153,28 @@ namespace TaskbarHero
 
         [DllImport("kernel32.dll")]
         public static extern uint GetCurrentThreadId();
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern int GetModuleFileName(IntPtr hModule, System.Text.StringBuilder filename, int size);
+
+        [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern int RegCreateKeyEx(
+            IntPtr hKey, string subKey, int reserved, string classType, int options,
+            int samDesired, IntPtr securityAttributes, out IntPtr result, out int disposition);
+
+        [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern int RegOpenKeyEx(IntPtr hKey, string subKey, int options, int samDesired, out IntPtr result);
+
+        [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern int RegSetValueEx(IntPtr hKey, string valueName, int reserved, int type, byte[] data, int cbData);
+
+        [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern int RegQueryValueEx(IntPtr hKey, string valueName, int reserved, out int type, byte[] data, ref int cbData);
+
+        [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern int RegDeleteValue(IntPtr hKey, string valueName);
+
+        [DllImport("advapi32.dll")]
+        public static extern int RegCloseKey(IntPtr hKey);
     }
 }

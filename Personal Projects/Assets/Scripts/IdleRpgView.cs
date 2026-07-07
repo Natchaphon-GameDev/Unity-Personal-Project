@@ -18,10 +18,10 @@ namespace TaskbarHero
         [SerializeField] IdleRpgConfig config;
 
         IdleRpg game;
+        bool ownsGame;   // true only for the standalone fallback below (no GameController bound it)
         Transform hero;
         Transform monster;
         Transform hpFillPivot;   // scales on X (0..1) to show remaining monster HP
-        TextMesh label;
 
         int lastStage;
         float heroBobPhase;
@@ -29,13 +29,35 @@ namespace TaskbarHero
 
         static Sprite squareSprite;
 
+        /// <summary>The sim being rendered (bound by GameController, or self-built as a fallback).</summary>
+        public IdleRpg Game => game;
+
         void Awake()
         {
-            var rules = config != null ? config.ToRules() : new IdleRpgRules();
-            game = new IdleRpg(rules);
-            lastStage = game.Stage;
             BuildVisuals();
+        }
+
+        void Start()
+        {
+            // If no GameController bound a sim (e.g. running this scene object on its own
+            // in the editor), build a throwaway one so the view still shows a live game.
+            if (game == null)
+            {
+                var rules = config != null ? config.ToRules() : new IdleRpgRules();
+                game = new IdleRpg(rules);
+                ownsGame = true;
+            }
+
+            lastStage = game.Stage;
             Refresh();
+        }
+
+        /// <summary>Render the given sim. GameController owns its ticking, so the view won't tick it.</summary>
+        public void Bind(IdleRpg boundGame)
+        {
+            game = boundGame;
+            ownsGame = false;
+            lastStage = boundGame.Stage;
         }
 
         void Update()
@@ -43,7 +65,8 @@ namespace TaskbarHero
             if (game == null)
                 return;
 
-            game.Tick(Time.deltaTime);
+            if (ownsGame)
+                game.Tick(Time.deltaTime);
 
             // Hero hops in place on its attack cadence for a sign of life.
             heroBobPhase += Time.deltaTime * 9f;
@@ -66,6 +89,9 @@ namespace TaskbarHero
             Refresh();
         }
 
+        /// <summary>Brief scale pop on the monster, reused for tap feedback.</summary>
+        public void PulseMonster() => monsterSpawnFlash = Mathf.Max(monsterSpawnFlash, 0.5f);
+
         void Refresh()
         {
             if (hpFillPivot != null)
@@ -74,18 +100,31 @@ namespace TaskbarHero
                 scale.x = Mathf.Clamp01(game.MonsterHpFraction);
                 hpFillPivot.localScale = scale;
             }
-
-            if (label != null)
-                label.text = $"Lv {game.Level}   ATK {game.Attack}   Gold {game.Gold}   Stage {game.Stage}";
         }
 
         void BuildVisuals()
         {
+            // Semi-transparent "card" body behind everything: it's the visible widget
+            // background AND the drag surface. Drawn as a world sprite (not a UGUI image)
+            // so the hero/monster stay crisp on top of it and the desktop shows through
+            // its alpha. Its 2D collider (behind the monster's) makes empty body area drag
+            // the window while the monster still takes taps.
+            var body = MakeSprite("Body", new Color(0.06f, 0.06f, 0.08f, 0.55f), -2)
+                .Placed(new Vector3(0f, 0f, 0f), 1f);
+            body.localScale = new Vector3(5.7f, 1.8f, 1f);
+            body.gameObject.AddComponent<BoxCollider2D>().size = Vector2.one;
+            body.gameObject.AddComponent<DragHandle>();
+
             hero = MakeSprite("Hero", new Color(0.35f, 0.65f, 1f), 0)
                 .Placed(new Vector3(-2.2f, 0f, 0f), 1.4f);
 
             monster = MakeSprite("Monster", new Color(0.9f, 0.3f, 0.35f), 0)
                 .Placed(new Vector3(2.2f, 0f, 0f), 1.4f);
+
+            // Make the monster clickable (tap-to-attack). Collider is in the sprite's local
+            // space; the 1.4 scale makes it a ~1.4-unit box that a Physics2DRaycaster can hit.
+            monster.gameObject.AddComponent<BoxCollider2D>().size = Vector2.one;
+            monster.gameObject.AddComponent<MonsterClickTarget>().Setup(this);
 
             // Monster HP bar: dark background + a green fill anchored to its left edge.
             const float barWidth = 3.2f;
@@ -107,31 +146,6 @@ namespace TaskbarHero
             fill.SetParent(hpFillPivot, false);
             fill.localPosition = new Vector3(barWidth * 0.5f, 0f, 0f); // left edge at the pivot
             fill.localScale = new Vector3(barWidth, barHeight * 0.7f, 1f);
-
-            BuildLabel();
-        }
-
-        void BuildLabel()
-        {
-            var go = new GameObject("StatsLabel");
-            go.transform.SetParent(transform, false);
-            go.transform.localPosition = new Vector3(0f, 0.55f, -1f);
-
-            label = go.AddComponent<TextMesh>();
-            label.anchor = TextAnchor.MiddleCenter;
-            label.alignment = TextAlignment.Center;
-            label.characterSize = 0.12f;
-            label.fontSize = 48;
-            label.color = Color.white;
-
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            if (font != null)
-            {
-                label.font = font;
-                var meshRenderer = go.GetComponent<MeshRenderer>();
-                meshRenderer.sharedMaterial = font.material;
-                meshRenderer.sortingOrder = 10;
-            }
         }
 
         Transform MakeSprite(string name, Color color, int sortingOrder)

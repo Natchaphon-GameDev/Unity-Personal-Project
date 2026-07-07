@@ -32,6 +32,33 @@ namespace TaskbarHero
         public int BaseXpToNext = 20;
         public float XpToNextGrowth = 1.25f;
 
+        // --- Loot & equipment ---
+        // Chance a defeated monster drops an item. 0 disables loot entirely (default so
+        // the base sim tests see no drops). Rare/Epic chances are checked in that order;
+        // anything else is Common.
+        public float DropChance = 0f;
+        public float RareDropChance = 0.25f;
+        public float EpicDropChance = 0.05f;
+        public int LootBaseMagnitude = 4;   // percent bonus a Common item starts at
+        public int LootRarityBonus = 4;     // extra percent per rarity tier above Common
+        public int LootStageDivisor = 5;    // +1% magnitude per this many stages
+        public int LootMagnitudeSpread = 3; // random extra percent, 0..this inclusive
+        public int SellValueBase = 5;       // gold multiplier when an item is auto-sold
+
+        // --- Bosses ---
+        // Every Nth stage is a timed boss. 0 disables bosses (default for base sim tests).
+        public int BossEveryNStages = 0;
+        public float BossHpMultiplier = 8f;
+        public float BossTimeLimitSeconds = 30f;
+        public float BossGoldMultiplier = 10f;
+
+        // --- Tap-to-attack ---
+        public float TapDamageMultiplier = 3f;
+        public float TapCooldownSeconds = 0.15f;
+
+        // --- Offline progress ---
+        public double OfflineCapSeconds = 8 * 3600;
+
         public int MonsterHpForStage(int stage) => ScaledInt(BaseMonsterHp, MonsterHpGrowth, stage);
         public int GoldForStage(int stage) => ScaledInt(BaseGold, GoldGrowth, stage);
         public int XpForStage(int stage) => ScaledInt(BaseXp, XpGrowth, stage);
