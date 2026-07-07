@@ -19,16 +19,14 @@ namespace TaskbarHero.EditorTools
         const string ScenePath = "Assets/Scenes/TaskbarHero.unity";
         const string ConfigPath = "Assets/Settings/IdleRpgConfig.asset";
 
-        static readonly Color PanelColor = new Color(0.07f, 0.06f, 0.08f, 0.97f);
-        static readonly Color TextColor = new Color(0.93f, 0.9f, 0.85f, 1f);
-        static readonly Color ButtonColor = new Color(0.45f, 0.26f, 0.13f, 0.98f);
-        static readonly Color FieldColor = new Color(0.13f, 0.11f, 0.1f, 1f);
+        static readonly Color TextColor = UiTheme.Cream;
 
         [MenuItem("Tools/Taskbar Hero/Set Up Environment")]
         public static void SetUpEnvironment()
         {
             ApplyPlayerSettings();
             DisableHdrOnUrpAssets();
+            TaskbarHeroArt.GenerateAll();
             CreateOverlayScene();
             TrySwitchToWindowsTarget();
             Debug.Log("Taskbar Hero: environment setup finished.");
@@ -149,6 +147,7 @@ namespace TaskbarHero.EditorTools
             var go = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             var canvas = go.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.pixelPerfect = true; // keep the pixel font and 9-slice borders crisp
             scaler = go.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize; // scaleFactor driven by AppFlow
             scaler.scaleFactor = 1f;
@@ -157,8 +156,8 @@ namespace TaskbarHero.EditorTools
 
         struct HudRefs
         {
-            public GameObject hudRoot, toastRoot;
-            public Text statsText, lootFeedText, toastText;
+            public GameObject hudRoot, lootRoot, toastRoot;
+            public Text goldText, statsText, lootFeedText, toastText;
             public Button gearButton, closeButton;
         }
 
@@ -167,35 +166,58 @@ namespace TaskbarHero.EditorTools
             var hudRoot = UiObject("HudRoot", canvas);
             Stretch(Rt(hudRoot));
 
-            var stats = MakeText(hudRoot.transform, "StatsText", "", 16, TextAnchor.UpperLeft);
+            // Gold counter: coin icon + amount in a gold-rimmed pill, top-left.
+            var goldPill = UiPanel("GoldPill", hudRoot.transform, "pill");
+            PlaceTopLeft(Rt(goldPill), 8, 6, 116, 24);
+            var coinIcon = UiSpriteImage("CoinIcon", goldPill.transform, Ui("coin"));
+            PlaceTopLeft(Rt(coinIcon), 5, 4, 16, 16);
+            var gold = WithOutline(MakeText(goldPill.transform, "GoldText", "0", 16, TextAnchor.MiddleLeft));
+            gold.color = UiTheme.Gold;
+            gold.raycastTarget = false;
+            Stretch(Rt(gold.gameObject), 26, 1, 6, 1);
+
+            var stats = WithOutline(MakeText(hudRoot.transform, "StatsText", "", 14, TextAnchor.UpperLeft));
             stats.raycastTarget = false; // don't block dragging the body under it
-            PlaceTopLeft(Rt(stats.gameObject), 14, 8, 340, 46);
+            PlaceTopLeft(Rt(stats.gameObject), 10, 36, 340, 40);
 
-            var loot = MakeText(hudRoot.transform, "LootFeedText", "", 13, TextAnchor.LowerLeft);
-            loot.raycastTarget = false;
-            loot.color = new Color(0.8f, 0.85f, 0.6f, 1f);
-            PlaceBottomLeft(Rt(loot.gameObject), 14, 8, 360, 24);
-
-            // Font-safe glyphs (LegacyRuntime.ttf/Arial lacks a gear and heavy ✕):
-            // "≡" reads as a settings/menu button, "X" as close.
-            var gear = MakeButton(hudRoot.transform, "GearButton", "≡", out _);
-            PlaceTopRight(Rt(gear.gameObject), 44, 8, 30, 28);
-
+            // Font-safe glyphs (the pixel font has no gear or heavy ✕ glyph):
+            // "=" reads as a settings/menu button, "X" as close. Stacked vertically in
+            // the corner so the monster HP bar has the horizontal space next to them.
             var close = MakeButton(hudRoot.transform, "CloseButton", "X", out _);
-            PlaceTopRight(Rt(close.gameObject), 8, 8, 30, 28);
+            PlaceTopRight(Rt(close.gameObject), 8, 6, 28, 26);
 
-            var toastRoot = UiImage("ToastRoot", hudRoot.transform, new Color(0.05f, 0.05f, 0.06f, 0.92f));
-            PlaceCenter(Rt(toastRoot), 380, 84, 0);
-            var toastText = MakeText(toastRoot.transform, "ToastText", "", 16, TextAnchor.MiddleCenter);
+            var gear = MakeButton(hudRoot.transform, "GearButton", "=", out _);
+            PlaceTopRight(Rt(gear.gameObject), 8, 36, 28, 26);
+
+            // Loot feed: chest icon + rarity-colored line in a slim dark pill, bottom-left.
+            var lootRoot = UiPanel("LootRoot", hudRoot.transform, "frame");
+            PlaceBottomLeft(Rt(lootRoot), 8, 6, 330, 24);
+            var chestIcon = UiSpriteImage("ChestIcon", lootRoot.transform, Art("chest"));
+            PlaceTopLeft(Rt(chestIcon), 4, 4, 16, 16);
+            var loot = MakeText(lootRoot.transform, "LootFeedText", "", 14, TextAnchor.MiddleLeft);
+            loot.raycastTarget = false;
+            Stretch(Rt(loot.gameObject), 26, 1, 6, 1);
+            lootRoot.SetActive(false);
+
+            // Welcome-back toast: iron panel with a gold title over the stats line.
+            var toastRoot = UiPanel("ToastRoot", hudRoot.transform, "panel");
+            PlaceCenter(Rt(toastRoot), 360, 92, 0);
+            var toastTitle = WithOutline(MakeText(toastRoot.transform, "ToastTitle", "WELCOME BACK", 18, TextAnchor.MiddleCenter));
+            toastTitle.color = UiTheme.Gold;
+            toastTitle.raycastTarget = false;
+            PlaceTopLeftFull(Rt(toastTitle.gameObject), 14, 26);
+            var toastText = MakeText(toastRoot.transform, "ToastText", "", 14, TextAnchor.MiddleCenter);
             toastText.raycastTarget = false;
-            Stretch(Rt(toastText.gameObject), 10, 8, 10, 8);
+            Stretch(Rt(toastText.gameObject), 12, 10, 12, 44);
             toastRoot.SetActive(false);
 
             var hud = hudRoot.AddComponent<HudPanel>();
             refs = new HudRefs
             {
                 hudRoot = hudRoot,
+                lootRoot = lootRoot,
                 toastRoot = toastRoot,
+                goldText = gold,
                 statsText = stats,
                 lootFeedText = loot,
                 toastText = toastText,
@@ -207,7 +229,9 @@ namespace TaskbarHero.EditorTools
 
         static void WireHud(HudPanel hud, HudRefs r) => SetRefs(hud,
             ("hudRoot", r.hudRoot),
+            ("goldText", r.goldText),
             ("statsText", r.statsText),
+            ("lootRoot", r.lootRoot),
             ("lootFeedText", r.lootFeedText),
             ("gearButton", r.gearButton),
             ("closeButton", r.closeButton),
@@ -225,36 +249,42 @@ namespace TaskbarHero.EditorTools
 
         static SettingsPanel BuildSettings(Transform canvas, out SettingsRefs refs)
         {
-            var root = UiImage("SettingsRoot", canvas, PanelColor);
+            var root = UiPanel("SettingsRoot", canvas, "panel");
             Stretch(Rt(root));
 
-            var title = MakeText(root.transform, "Title", "Taskbar Hero — Settings", 22, TextAnchor.MiddleCenter);
+            // Crimson header banner with the panel name, like the reference game's windows.
+            var banner = UiPanel("TitleBanner", root.transform, "banner");
+            PlaceTopCenter(Rt(banner), 14, 280, 46);
+            var title = WithOutline(MakeText(banner.transform, "Title", "TASKBAR HERO", 22, TextAnchor.MiddleCenter));
+            title.color = UiTheme.Gold;
             title.raycastTarget = false;
-            PlaceTopLeftFull(Rt(title.gameObject), 18, 40);
+            Stretch(Rt(title.gameObject));
 
-            MakeLabel(root.transform, "VolumeLabel", "Master Volume", 30, 96);
+            MakeLabel(root.transform, "VolumeLabel", "Master Volume", 30, 108);
             var volume = MakeSlider(root.transform, "VolumeSlider", 1f);
-            PlaceTopLeft(Rt(volume.gameObject), 220, 100, 270, 22);
+            PlaceTopLeft(Rt(volume.gameObject), 220, 112, 266, 22);
 
-            MakeLabel(root.transform, "AlwaysOnTopLabel", "Always on Top", 30, 150);
+            MakeLabel(root.transform, "AlwaysOnTopLabel", "Always on Top", 30, 162);
             var alwaysOnTop = MakeToggle(root.transform, "AlwaysOnTopToggle", true);
-            PlaceTopLeft(Rt(alwaysOnTop.gameObject), 452, 146, 34, 34);
+            PlaceTopLeft(Rt(alwaysOnTop.gameObject), 452, 158, 34, 34);
 
-            MakeLabel(root.transform, "StartupLabel", "Launch at Windows Startup", 30, 204);
+            MakeLabel(root.transform, "StartupLabel", "Launch at Windows Startup", 30, 216);
             var startup = MakeToggle(root.transform, "StartupToggle", false);
-            PlaceTopLeft(Rt(startup.gameObject), 452, 200, 34, 34);
+            PlaceTopLeft(Rt(startup.gameObject), 452, 212, 34, 34);
 
-            MakeLabel(root.transform, "SizeLabelText", "Window Size", 30, 258);
+            MakeLabel(root.transform, "SizeLabelText", "Window Size", 30, 270);
             var sizeButton = MakeButton(root.transform, "SizeButton", "1x", out var sizeLabel);
-            PlaceTopLeft(Rt(sizeButton.gameObject), 360, 252, 126, 40);
+            PlaceTopLeft(Rt(sizeButton.gameObject), 360, 264, 126, 42);
 
             var confirm = MakeButton(root.transform, "ConfirmButton", "Next", out var confirmLabel);
-            PlaceTopLeft(Rt(confirm.gameObject), 170, 322, 180, 50);
+            confirmLabel.color = UiTheme.Gold;
+            confirmLabel.fontSize = 20;
+            PlaceTopLeft(Rt(confirm.gameObject), 160, 326, 200, 52);
 
             var footer = MakeText(root.transform, "Footer", "You can change these anytime in Settings.", 12, TextAnchor.MiddleCenter);
             footer.raycastTarget = false;
-            footer.color = new Color(0.7f, 0.68f, 0.62f, 1f);
-            PlaceTopLeftFull(Rt(footer.gameObject), 384, 24);
+            footer.color = UiTheme.CreamDim;
+            PlaceTopLeftFull(Rt(footer.gameObject), 390, 24);
 
             var panel = root.AddComponent<SettingsPanel>();
             refs = new SettingsRefs
@@ -285,6 +315,21 @@ namespace TaskbarHero.EditorTools
 
         static Font LegacyFont => Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
+        static Font PixelFont
+        {
+            get
+            {
+                var font = AssetDatabase.LoadAssetAtPath<Font>("Assets/Resources/TaskbarHero/KenneyMini.ttf");
+                return font != null ? font : LegacyFont;
+            }
+        }
+
+        static Sprite Ui(string name) =>
+            AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/Resources/TaskbarHero/UI/{name}.png");
+
+        static Sprite Art(string name) =>
+            AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/Resources/TaskbarHero/{name}.png");
+
         static GameObject UiObject(string name, Transform parent)
         {
             var go = new GameObject(name, typeof(RectTransform));
@@ -299,6 +344,35 @@ namespace TaskbarHero.EditorTools
             return go;
         }
 
+        /// <summary>A 9-sliced pixel-art panel using one of the generated UI sprites.</summary>
+        static GameObject UiPanel(string name, Transform parent, string spriteName)
+        {
+            var go = UiObject(name, parent);
+            var image = go.AddComponent<Image>();
+            image.sprite = Ui(spriteName);
+            image.type = Image.Type.Sliced;
+            return go;
+        }
+
+        /// <summary>A plain sprite image (icon), not raycastable so it never blocks dragging.</summary>
+        static GameObject UiSpriteImage(string name, Transform parent, Sprite sprite)
+        {
+            var go = UiObject(name, parent);
+            var image = go.AddComponent<Image>();
+            image.sprite = sprite;
+            image.raycastTarget = false;
+            return go;
+        }
+
+        /// <summary>Dark 1px drop outline so floating text stays readable over any desktop.</summary>
+        static Text WithOutline(Text text)
+        {
+            var outline = text.gameObject.AddComponent<Outline>();
+            outline.effectColor = UiTheme.Outline;
+            outline.effectDistance = new Vector2(1f, -1f);
+            return text;
+        }
+
         static RectTransform Rt(GameObject go) => (RectTransform)go.transform;
 
         static Text MakeText(Transform parent, string name, string content, int fontSize, TextAnchor anchor)
@@ -306,7 +380,7 @@ namespace TaskbarHero.EditorTools
             var go = UiObject(name, parent);
             var text = go.AddComponent<Text>();
             text.text = content;
-            text.font = LegacyFont;
+            text.font = PixelFont;
             text.fontSize = fontSize;
             text.alignment = anchor;
             text.color = TextColor;
@@ -324,10 +398,10 @@ namespace TaskbarHero.EditorTools
 
         static Button MakeButton(Transform parent, string name, string label, out Text labelText)
         {
-            var go = UiImage(name, parent, ButtonColor);
+            var go = UiPanel(name, parent, "button");
             var button = go.AddComponent<Button>();
             button.targetGraphic = go.GetComponent<Image>();
-            labelText = MakeText(go.transform, "Label", label, 18, TextAnchor.MiddleCenter);
+            labelText = MakeText(go.transform, "Label", label, 16, TextAnchor.MiddleCenter);
             labelText.raycastTarget = false;
             Stretch(Rt(labelText.gameObject));
             return button;
@@ -335,11 +409,11 @@ namespace TaskbarHero.EditorTools
 
         static Toggle MakeToggle(Transform parent, string name, bool isOn)
         {
-            var go = UiImage(name, parent, FieldColor);
+            var go = UiPanel(name, parent, "frame");
             var toggle = go.AddComponent<Toggle>();
             toggle.targetGraphic = go.GetComponent<Image>();
-            var check = UiImage("Checkmark", go.transform, new Color(0.3f, 0.85f, 0.35f, 1f));
-            Stretch(Rt(check), 5, 5, 5, 5);
+            var check = UiImage("Checkmark", go.transform, UiTheme.Gold);
+            Stretch(Rt(check), 7, 7, 7, 7);
             toggle.graphic = check.GetComponent<Image>();
             toggle.SetIsOnWithoutNotify(isOn);
             return toggle;
@@ -350,12 +424,12 @@ namespace TaskbarHero.EditorTools
             var go = UiObject(name, parent);
             var slider = go.AddComponent<Slider>();
 
-            var background = UiImage("Background", go.transform, FieldColor);
+            var background = UiPanel("Background", go.transform, "frame");
             Stretch(Rt(background));
 
             var fillArea = UiObject("Fill Area", go.transform);
-            Stretch(Rt(fillArea), 6, 0, 6, 0);
-            var fill = UiImage("Fill", fillArea.transform, new Color(0.7f, 0.55f, 0.3f, 1f));
+            Stretch(Rt(fillArea), 4, 4, 4, 4);
+            var fill = UiImage("Fill", fillArea.transform, UiTheme.Gold);
             var fillRt = Rt(fill);
             fillRt.anchorMin = new Vector2(0f, 0f);
             fillRt.anchorMax = new Vector2(0f, 1f);
@@ -363,7 +437,7 @@ namespace TaskbarHero.EditorTools
 
             var handleArea = UiObject("Handle Slide Area", go.transform);
             Stretch(Rt(handleArea), 6, 0, 6, 0);
-            var handle = UiImage("Handle", handleArea.transform, new Color(0.86f, 0.8f, 0.7f, 1f));
+            var handle = UiPanel("Handle", handleArea.transform, "button");
             var handleRt = Rt(handle);
             handleRt.anchorMin = new Vector2(0f, 0f);
             handleRt.anchorMax = new Vector2(0f, 1f);
@@ -406,6 +480,14 @@ namespace TaskbarHero.EditorTools
             rt.offsetMax = new Vector2(0f, 0f);
             rt.anchoredPosition = new Vector2(0f, -y);
             rt.sizeDelta = new Vector2(0f, h);
+        }
+
+        static void PlaceTopCenter(RectTransform rt, float y, float w, float h)
+        {
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0f, -y);
+            rt.sizeDelta = new Vector2(w, h);
         }
 
         static void PlaceTopRight(RectTransform rt, float x, float y, float w, float h)

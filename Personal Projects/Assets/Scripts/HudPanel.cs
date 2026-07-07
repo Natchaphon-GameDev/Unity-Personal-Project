@@ -11,7 +11,9 @@ namespace TaskbarHero
     public sealed class HudPanel : MonoBehaviour
     {
         [SerializeField] GameObject hudRoot;
+        [SerializeField] Text goldText;
         [SerializeField] Text statsText;
+        [SerializeField] GameObject lootRoot;
         [SerializeField] Text lootFeedText;
         [SerializeField] Button gearButton;
         [SerializeField] Button closeButton;
@@ -33,6 +35,8 @@ namespace TaskbarHero
 
             if (toastRoot != null)
                 toastRoot.SetActive(false);
+            if (lootRoot != null)
+                lootRoot.SetActive(false);
             if (lootFeedText != null)
                 lootFeedText.text = string.Empty;
 
@@ -57,9 +61,15 @@ namespace TaskbarHero
             if (toastRoot == null || toastText == null || !result.HasAnything)
                 return;
 
-            string line = $"While you were away\n+{result.GoldGained} gold   +{result.StagesGained} stages";
+            // Offline stages can go backwards (failed boss timers), so only brag about gains.
+            var parts = new System.Collections.Generic.List<string>();
+            if (result.GoldGained > 0)
+                parts.Add($"+{result.GoldGained:N0} gold");
+            if (result.StagesGained > 0)
+                parts.Add($"+{result.StagesGained} stages");
             if (result.LevelsGained > 0)
-                line += $"   +{result.LevelsGained} lv";
+                parts.Add($"+{result.LevelsGained} lv");
+            string line = string.Join("   ", parts);
             toastText.text = line;
             toastRoot.SetActive(true);
             toastTimer = 6f;
@@ -68,19 +78,26 @@ namespace TaskbarHero
         void Update()
         {
             var game = controller != null ? controller.Game : null;
+            if (goldText != null && game != null)
+                goldText.text = game.Gold.ToString("N0");
             if (statsText != null && game != null)
             {
-                string text = $"Lv {game.Level}    ATK {game.Attack}    Gold {game.Gold}    Stage {game.Stage}";
+                string text = $"Lv {game.Level}   ATK {game.Attack}   Stage {game.Stage}";
                 if (game.InBossFight)
-                    text += $"\nBOSS  {Mathf.CeilToInt(game.BossTimeRemaining)}s";
+                    text += $"\n<color={UiTheme.BossHex}>BOSS  {Mathf.CeilToInt(game.BossTimeRemaining)}s</color>";
                 statsText.text = text;
             }
 
             if (lootFeedTimer > 0f)
             {
                 lootFeedTimer -= Time.deltaTime;
-                if (lootFeedTimer <= 0f && lootFeedText != null)
-                    lootFeedText.text = string.Empty;
+                if (lootFeedTimer <= 0f)
+                {
+                    if (lootFeedText != null)
+                        lootFeedText.text = string.Empty;
+                    if (lootRoot != null)
+                        lootRoot.SetActive(false);
+                }
             }
 
             if (toastTimer > 0f)
@@ -95,7 +112,10 @@ namespace TaskbarHero
         {
             if (lootFeedText == null)
                 return;
-            lootFeedText.text = (equipped ? "Equipped " : "Sold ") + $"{item.Rarity} {item.Slot} (+{item.MagnitudePercent}%)";
+            lootFeedText.text = (equipped ? "Equipped " : "Sold ")
+                + $"<color={UiTheme.RarityHex(item.Rarity)}>{item.Rarity} {item.Slot}</color> +{item.MagnitudePercent}%";
+            if (lootRoot != null)
+                lootRoot.SetActive(true);
             lootFeedTimer = 4f;
         }
     }
