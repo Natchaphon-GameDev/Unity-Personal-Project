@@ -30,6 +30,14 @@ namespace TaskbarHero
             var margins = new Win32.MARGINS { LeftWidth = -1 };
             Win32.DwmExtendFrameIntoClientArea(hwnd, ref margins);
 
+            // Click-through: let mouse input pass to the real taskbar underneath, and
+            // hide the overlay from Alt-Tab. Setting WS_EX_LAYERED alone (without ever
+            // calling SetLayeredWindowAttributes) keeps the DWM per-pixel transparency
+            // intact while WS_EX_TRANSPARENT makes hit-testing fall through.
+            var exStyle = Win32.GetWindowLong(hwnd, Win32.GWL_EXSTYLE);
+            Win32.SetWindowLong(hwnd, Win32.GWL_EXSTYLE,
+                exStyle | Win32.WS_EX_LAYERED | Win32.WS_EX_TRANSPARENT | Win32.WS_EX_TOOLWINDOW);
+
             // Pin the window over the taskbar rect, always on top.
             Win32.SetWindowPos(hwnd, Win32.HWND_TOPMOST,
                 rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top,

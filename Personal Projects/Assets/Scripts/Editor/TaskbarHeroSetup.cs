@@ -12,6 +12,7 @@ namespace TaskbarHero.EditorTools
     public static class TaskbarHeroSetup
     {
         const string ScenePath = "Assets/Scenes/TaskbarHero.unity";
+        const string ConfigPath = "Assets/Settings/IdleRpgConfig.asset";
 
         [MenuItem("Tools/Taskbar Hero/Set Up Environment")]
         public static void SetUpEnvironment()
@@ -69,7 +70,14 @@ namespace TaskbarHero.EditorTools
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0f, 0f, 0f, 0f); // alpha 0 = see-through after DWM extend
 
-            new GameObject("TaskbarOverlay", typeof(TaskbarOverlayWindow));
+            // Orthographic, centred on the origin: gives the idle-RPG view predictable
+            // world units to lay out against on the short, very wide taskbar strip.
+            camera.orthographic = true;
+            camera.orthographicSize = 1f;
+            camera.transform.position = new Vector3(0f, 0f, -10f);
+            camera.transform.rotation = Quaternion.identity;
+
+            new GameObject("TaskbarOverlay", typeof(TaskbarOverlayWindow), typeof(TaskbarHotkeys));
 
             var samples = new GameObject("SampleVisuals");
             var switcher = samples.AddComponent<VisualSampleSwitcher>();
@@ -108,9 +116,36 @@ namespace TaskbarHero.EditorTools
 
             sample2D.SetActive(false); // match the switcher's default Sample3D mode
 
+            // The 2D/3D "proof of life" samples are kept for reference but hidden, so
+            // the actual game is what shows on the taskbar. Re-enable SampleVisuals in
+            // the inspector to compare the samples again.
+            samples.SetActive(false);
+
+            CreateIdleRpgGame();
+
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             Debug.Log("Taskbar Hero: created " + ScenePath + " and set it as the only build scene.");
+        }
+
+        static void CreateIdleRpgGame()
+        {
+            // Reuse the tuning asset if it already exists, else create one so balance
+            // values live in a designer-editable ScriptableObject (repo convention).
+            var config = AssetDatabase.LoadAssetAtPath<IdleRpgConfig>(ConfigPath);
+            if (config == null)
+            {
+                config = ScriptableObject.CreateInstance<IdleRpgConfig>();
+                AssetDatabase.CreateAsset(config, ConfigPath);
+                AssetDatabase.SaveAssets();
+            }
+
+            var game = new GameObject("IdleRpgGame");
+            var view = game.AddComponent<IdleRpgView>();
+
+            var viewProps = new SerializedObject(view);
+            viewProps.FindProperty("config").objectReferenceValue = config;
+            viewProps.ApplyModifiedPropertiesWithoutUndo();
         }
 
         static void TrySwitchToWindowsTarget()
