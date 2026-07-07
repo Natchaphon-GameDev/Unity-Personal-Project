@@ -14,7 +14,7 @@ namespace TaskbarHero
         const float MinKillSoundInterval = 0.18f; // rate-limit the frequent kill blip
 
         AudioSource source;
-        AudioClip killClip, levelUpClip, bossClip, bossWinClip, lootClip, tapClip;
+        AudioClip killClip, levelUpClip, bossClip, bossWinClip, lootClip, tapClip, critClip;
         IdleRpg boundGame;
         float lastKillSoundTime = -99f;
 
@@ -31,6 +31,7 @@ namespace TaskbarHero
             bossWinClip = Clip("sfx_bosswin", SfxSynth.Arpeggio(new[] { 523f, 784f, 1047f }, 0.08f, 0.45f, 8f, sr), sr);
             lootClip = Clip("sfx_loot", SfxSynth.Arpeggio(new[] { 880f, 1175f }, 0.05f, 0.35f, 16f, sr), sr);
             tapClip = Clip("sfx_tap", SfxSynth.Blip(1200f, 0.03f, 0.35f, 40f, sr), sr);
+            critClip = Clip("sfx_crit", SfxSynth.Chirp(900f, 1800f, 0.08f, 0.5f, 18f, sr), sr);
         }
 
         void OnDestroy() => Unbind();
@@ -50,7 +51,7 @@ namespace TaskbarHero
         }
 
         /// <summary>Called by the monster click handler when a tap actually lands.</summary>
-        public void PlayTap() => source.PlayOneShot(tapClip);
+        public void PlayTap(bool crit = false) => source.PlayOneShot(crit ? critClip : tapClip);
 
         void Unbind()
         {

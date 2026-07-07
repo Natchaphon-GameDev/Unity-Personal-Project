@@ -89,8 +89,9 @@ namespace TaskbarHero
             Refresh();
         }
 
-        /// <summary>Brief scale pop on the monster, reused for tap feedback.</summary>
-        public void PulseMonster() => monsterSpawnFlash = Mathf.Max(monsterSpawnFlash, 0.5f);
+        /// <summary>Brief scale pop on the monster, reused for tap feedback. Crits pop harder.</summary>
+        public void PulseMonster(bool crit = false) =>
+            monsterSpawnFlash = Mathf.Max(monsterSpawnFlash, crit ? 1f : 0.5f);
 
         void Refresh()
         {

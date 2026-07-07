@@ -53,6 +53,8 @@ namespace TaskbarHero
         [Header("Tap-to-attack")]
         [Min(1f)] public float tapDamageMultiplier = 3f;
         [Min(0f)] public float tapCooldownSeconds = 0.15f;
+        [Range(0f, 1f)] public float tapCritChance = 0.15f;
+        [Min(1f)] public float tapCritMultiplier = 3f;
 
         [Header("Offline progress")]
         [Min(0f)] public float offlineCapHours = 8f;
@@ -85,6 +87,8 @@ namespace TaskbarHero
             BossGoldMultiplier = bossGoldMultiplier,
             TapDamageMultiplier = tapDamageMultiplier,
             TapCooldownSeconds = tapCooldownSeconds,
+            TapCritChance = tapCritChance,
+            TapCritMultiplier = tapCritMultiplier,
             OfflineCapSeconds = offlineCapHours * 3600.0,
         };
     }

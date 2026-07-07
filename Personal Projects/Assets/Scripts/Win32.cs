@@ -62,12 +62,10 @@ namespace TaskbarHero
         public const uint WS_VISIBLE = 0x10000000;
 
         // Click-through overlay styles. WS_EX_LAYERED | WS_EX_TRANSPARENT lets mouse
-        // input fall through to the real taskbar; WS_EX_TOOLWINDOW keeps the overlay
-        // out of Alt-Tab. NOTE: we deliberately never call SetLayeredWindowAttributes
-        // — with Unity's DirectX swapchain that would turn the whole window opaque and
-        // defeat the DWM per-pixel transparency.
+        // input fall through to the real taskbar. NOTE: we deliberately never call
+        // SetLayeredWindowAttributes — with Unity's DirectX swapchain that would turn
+        // the whole window opaque and defeat the DWM per-pixel transparency.
         public const uint WS_EX_TRANSPARENT = 0x00000020;
-        public const uint WS_EX_TOOLWINDOW = 0x00000080;
         public const uint WS_EX_LAYERED = 0x00080000;
 
         public const uint SWP_NOSIZE = 0x0001;
@@ -80,6 +78,7 @@ namespace TaskbarHero
         // Free-floating overlay: drag + selective click-through + monitor placement.
         public static readonly IntPtr HWND_NOTOPMOST = new IntPtr(-2);
         public const uint MONITOR_DEFAULTTOPRIMARY = 0x00000001;
+        public const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
         public const int VK_LBUTTON = 0x01;
 
         // Global hotkey modifiers / messages (used by TaskbarHotkeys).
@@ -135,6 +134,9 @@ namespace TaskbarHero
 
         [DllImport("user32.dll")]
         public static extern IntPtr MonitorFromPoint(POINT point, uint flags);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr MonitorFromWindow(IntPtr hWnd, uint flags);
 
         [DllImport("user32.dll")]
         public static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);

@@ -23,12 +23,12 @@ namespace TaskbarHero
         public void OnPointerClick(PointerEventData eventData)
         {
             var game = view != null ? view.Game : null;
-            if (game == null || !game.TapStrike())
+            if (game == null || !game.TapStrike(out bool crit))
                 return;
 
-            view.PulseMonster();
+            view.PulseMonster(crit);
             if (sfx != null)
-                sfx.PlayTap();
+                sfx.PlayTap(crit);
         }
     }
 }

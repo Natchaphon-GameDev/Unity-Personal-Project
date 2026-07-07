@@ -53,6 +53,13 @@ namespace TaskbarHero.EditorTools
             // Flip-model swapchains break the DWM "sheet of glass" transparency trick.
             PlayerSettings.useFlipModelSwapchain = false;
 
+            // That flag only affects D3D11 — D3D12 (the Unity 6 automatic default) always
+            // presents via flip model and renders the overlay on solid black, so pin the
+            // Windows build to D3D11 explicitly.
+            PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.StandaloneWindows64, false);
+            PlayerSettings.SetGraphicsAPIs(BuildTarget.StandaloneWindows64,
+                new[] { UnityEngine.Rendering.GraphicsDeviceType.Direct3D11 });
+
             Debug.Log("Taskbar Hero: player settings applied.");
         }
 

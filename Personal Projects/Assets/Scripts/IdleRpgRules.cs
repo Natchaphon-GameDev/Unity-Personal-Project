@@ -55,6 +55,10 @@ namespace TaskbarHero
         // --- Tap-to-attack ---
         public float TapDamageMultiplier = 3f;
         public float TapCooldownSeconds = 0.15f;
+        // Chance a tap lands a critical hit that multiplies the tap damage again.
+        // 0 disables crits (default so the base sim tests draw no extra rng).
+        public float TapCritChance = 0f;
+        public float TapCritMultiplier = 3f;
 
         // --- Offline progress ---
         public double OfflineCapSeconds = 8 * 3600;

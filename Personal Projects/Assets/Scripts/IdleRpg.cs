@@ -134,13 +134,27 @@ namespace TaskbarHero
         }
 
         /// <summary>Player-triggered bonus hit. Returns false (and does nothing) while on cooldown.</summary>
-        public bool TapStrike()
+        public bool TapStrike() => TapStrike(out _);
+
+        /// <summary>
+        /// Player-triggered bonus hit; <paramref name="crit"/> reports whether it landed a
+        /// critical (see <see cref="IdleRpgRules.TapCritChance"/>) so the caller can show
+        /// beefier feedback. Returns false (and does nothing) while on cooldown.
+        /// </summary>
+        public bool TapStrike(out bool crit)
         {
+            crit = false;
             if (tapCooldownRemaining > 0f)
                 return false;
 
             tapCooldownRemaining = rules.TapCooldownSeconds;
-            ApplyDamage((int)(Attack * rules.TapDamageMultiplier));
+
+            float damage = Attack * rules.TapDamageMultiplier;
+            crit = rules.TapCritChance > 0f && rng.NextDouble() < rules.TapCritChance;
+            if (crit)
+                damage *= rules.TapCritMultiplier;
+
+            ApplyDamage((int)damage);
             return true;
         }
 

@@ -8,7 +8,7 @@ namespace TaskbarHero
 {
     /// <summary>
     /// Turns the Windows player window into a free-floating, borderless, transparent
-    /// overlay: content-sized, no taskbar button, optionally always-on-top, and able to
+    /// overlay: content-sized, optionally always-on-top, and able to
     /// toggle click-through so clicks on empty (transparent) pixels fall through to the
     /// desktop while clicks on the game are captured. Movement/hit-testing are driven by
     /// <see cref="WindowDragController"/> and <see cref="ClickThroughController"/>.
@@ -45,20 +45,37 @@ namespace TaskbarHero
             Win32.DwmExtendFrameIntoClientArea(hwnd, ref margins);
 
             uint ex = Win32.GetWindowLong(hwnd, Win32.GWL_EXSTYLE);
-            Win32.SetWindowLong(hwnd, Win32.GWL_EXSTYLE, ex | Win32.WS_EX_LAYERED | Win32.WS_EX_TOOLWINDOW);
+            Win32.SetWindowLong(hwnd, Win32.GWL_EXSTYLE, ex | Win32.WS_EX_LAYERED);
 
             IsClickThrough = false;
             IsReady = true;
 #endif
         }
 
-        /// <summary>Resize, keeping the current top-left corner.</summary>
+        /// <summary>
+        /// Resize, keeping the current top-left corner where possible. If the new size would
+        /// push the window past the edge of its monitor's work area (e.g. a taller Settings
+        /// panel opening while the strip sits near the bottom of the screen), the window is
+        /// nudged back on-screen instead.
+        /// </summary>
         public void SetSize(int width, int height)
         {
 #if UNITY_STANDALONE_WIN && !UNITY_EDITOR
             if (!IsReady) return;
-            Win32.SetWindowPos(hwnd, IntPtr.Zero, 0, 0, width, height,
-                Win32.SWP_NOMOVE | Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE | Win32.SWP_FRAMECHANGED);
+
+            int x = 0, y = 0;
+            bool hasPos = Win32.GetWindowRect(hwnd, out var current);
+            if (hasPos)
+            {
+                x = current.Left;
+                y = current.Top;
+                ClampToWorkArea(ref x, ref y, width, height);
+            }
+
+            uint flags = Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE | Win32.SWP_FRAMECHANGED;
+            if (!hasPos)
+                flags |= Win32.SWP_NOMOVE;
+            Win32.SetWindowPos(hwnd, IntPtr.Zero, x, y, width, height, flags);
 #endif
         }
 
@@ -108,14 +125,42 @@ namespace TaskbarHero
 #endif
         }
 
+        /// <summary>Move to (x, y), clamped so the window stays fully within its monitor's work area.</summary>
         public void MoveTo(int x, int y)
         {
 #if UNITY_STANDALONE_WIN && !UNITY_EDITOR
             if (!IsReady) return;
+
+            if (Win32.GetWindowRect(hwnd, out var current))
+                ClampToWorkArea(ref x, ref y, current.Right - current.Left, current.Bottom - current.Top);
+
             Win32.SetWindowPos(hwnd, IntPtr.Zero, x, y, 0, 0,
                 Win32.SWP_NOSIZE | Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE);
 #endif
         }
+
+#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
+        /// <summary>
+        /// Nudges (x, y) so a window of the given size stays fully within the work area of
+        /// the monitor it's currently nearest to. No-op (leaves x, y unchanged) if the
+        /// monitor info can't be read.
+        /// </summary>
+        void ClampToWorkArea(ref int x, ref int y, int width, int height)
+        {
+            IntPtr monitor = Win32.MonitorFromWindow(hwnd, Win32.MONITOR_DEFAULTTONEAREST);
+            var info = new Win32.MONITORINFO { cbSize = Marshal.SizeOf(typeof(Win32.MONITORINFO)) };
+            if (!Win32.GetMonitorInfo(monitor, ref info))
+                return;
+
+            int minX = info.rcWork.Left;
+            int maxX = Mathf.Max(minX, info.rcWork.Right - width);
+            int minY = info.rcWork.Top;
+            int maxY = Mathf.Max(minY, info.rcWork.Bottom - height);
+
+            x = Mathf.Clamp(x, minX, maxX);
+            y = Mathf.Clamp(y, minY, maxY);
+        }
+#endif
 
         public bool TryGetCursorPosition(out int screenX, out int screenY)
         {
