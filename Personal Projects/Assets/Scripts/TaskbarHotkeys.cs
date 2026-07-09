@@ -7,16 +7,20 @@ using System.Threading;
 namespace TaskbarHero
 {
     /// <summary>
-    /// Registers a global quit hotkey (Ctrl+Alt+Q) that works even though the overlay
-    /// is click-through and almost never the focused window. Normal Unity input can't
-    /// help here: with WS_EX_TRANSPARENT the window receives no keyboard focus, so we
-    /// go through Win32 RegisterHotKey instead.
+    /// Registers a global quit hotkey (Ctrl+Alt+Q; Control+Option+Q on a Mac keyboard)
+    /// that works even though the overlay is click-through and almost never the focused
+    /// window. Normal Unity input can't help here: a click-through window receives no
+    /// keyboard focus, so we go through the OS's global hotkey facility instead.
     ///
-    /// RegisterHotKey delivers WM_HOTKEY to the message queue of the thread that
-    /// registered it, and Unity owns the main window's message pump — so we run a
+    /// Windows: RegisterHotKey delivers WM_HOTKEY to the message queue of the thread
+    /// that registered it, and Unity owns the main window's message pump — so we run a
     /// dedicated background thread with its own GetMessage loop and hand the result
-    /// back to the main thread via a flag. No-op in the editor / off Windows, so the
-    /// project stays fully workable on macOS.
+    /// back to the main thread via a flag.
+    ///
+    /// macOS: Carbon RegisterEventHotKey (via TaskbarHeroMac.dylib) fires on the main
+    /// run loop with no permission prompts, so Update just polls a consume flag.
+    ///
+    /// No-op in the editor and on other platforms.
     /// </summary>
     public sealed class TaskbarHotkeys : MonoBehaviour
     {
@@ -72,6 +76,20 @@ namespace TaskbarHero
 
             Win32.UnregisterHotKey(IntPtr.Zero, HotkeyIdQuit);
         }
+#elif UNITY_STANDALONE_OSX && !UNITY_EDITOR
+        void Start()
+        {
+            if (!MacNative.TBH_RegisterQuitHotkey())
+                Debug.LogWarning("TaskbarHotkeys: RegisterEventHotKey failed; the Ctrl+Alt+Q quit hotkey is unavailable.");
+        }
+
+        void Update()
+        {
+            if (MacNative.TBH_ConsumeQuitHotkey())
+                Application.Quit();
+        }
+
+        void OnDestroy() => MacNative.TBH_UnregisterQuitHotkey();
 #endif
     }
 }
